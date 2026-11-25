@@ -27,6 +27,7 @@ if (isPng) {
   const w = bytes.readUInt32BE(16);
   const h = bytes.readUInt32BE(20);
   if (w > 1024 || h > 1024) throw new Error(`entry.png is ${w}x${h}, over 1024x1024`);
+  console.log(`entry.png is ${w}x${h} PNG`);
 }
 if (bytes.length > 1048576) throw new Error(`entry.png is ${bytes.length} bytes, over 1 MiB`);
 
