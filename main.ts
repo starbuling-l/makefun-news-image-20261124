@@ -1,44 +1,37 @@
-// news-image-20261124 entry, v2 image. Node 22, standard library only.
+// news-image-20261124 entry, v3 image. Node 22, standard library only.
 //
-// The entry image is entry.png beside this file: a 1024x1024 PNG that
-// sums up 24 November 2026 world news in one picture. This program
-// places an exact copy of it at <output>/entry.png for the grader.
+// The entry image is entry.png beside this file: one 1024x1024 PNG that
+// sums up 24 November 2026 world news. This program copies it unchanged
+// to <output>/entry.png for the grader, after checking the format the
+// competition asks for: PNG or JPEG, at most 1024x1024, at most 1 MiB.
 //
 // Run it outside the grader with:
 //   mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
 
-import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const sourcePath = fileURLToPath(new URL("./entry.png", import.meta.url));
-const outDir = process.env.MAKEFUN_OUTPUT_DIR || "/output";
-const outPath = join(outDir, "entry.png");
+const here = dirname(fileURLToPath(import.meta.url));
+const source = join(here, "entry.png");
+const outDir = process.env.MAKEFUN_OUTPUT_DIR ?? "/output";
+const target = join(outDir, "entry.png");
 
-const image = await readFile(sourcePath);
-const pngMagic = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-const jpegMagic = Buffer.from([0xff, 0xd8, 0xff]);
-const isPng = image.subarray(0, 8).equals(pngMagic);
-const isJpeg = image.subarray(0, 3).equals(jpegMagic);
-if (!isPng && !isJpeg) {
-  throw new Error("entry.png is not a PNG or JPEG image");
-}
+const bytes = readFileSync(source);
+const pngHead = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+const jpegHead = Buffer.from([0xff, 0xd8, 0xff]);
+const isPng = bytes.subarray(0, 8).equals(pngHead);
+const isJpeg = bytes.subarray(0, 3).equals(jpegHead);
+if (!isPng && !isJpeg) throw new Error("entry.png is neither PNG nor JPEG");
 if (isPng) {
-  const width = image.readUInt32BE(16);
-  const height = image.readUInt32BE(20);
-  if (width > 1024 || height > 1024) {
-    throw new Error(`entry.png is ${width}x${height}, over the 1024x1024 limit`);
-  }
-  console.log(`entry.png is ${width}x${height}`);
+  const w = bytes.readUInt32BE(16);
+  const h = bytes.readUInt32BE(20);
+  if (w > 1024 || h > 1024) throw new Error(`entry.png is ${w}x${h}, over 1024x1024`);
 }
-if (image.byteLength > 1_048_576) {
-  throw new Error(`entry.png is ${image.byteLength} bytes, over the 1 MiB limit`);
-}
+if (bytes.length > 1048576) throw new Error(`entry.png is ${bytes.length} bytes, over 1 MiB`);
 
-await mkdir(dirname(outPath), { recursive: true });
-await writeFile(outPath, image);
-const done = await stat(outPath);
-if (done.size !== image.byteLength) {
-  throw new Error(`wrote ${done.size} bytes, expected ${image.byteLength}`);
-}
-console.log(`entry.png (${done.size} bytes) -> ${outPath}`);
+mkdirSync(dirname(target), { recursive: true });
+writeFileSync(target, bytes);
+const written = statSync(target).size;
+if (written !== bytes.length) throw new Error(`wrote ${written} bytes, expected ${bytes.length}`);
+console.log(`entry.png (${written} bytes) -> ${target}`);
